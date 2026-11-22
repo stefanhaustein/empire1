@@ -2,6 +2,8 @@
 
 A real-time, single-player terminal strategy game inspired by classic *Empire*, written in Turbo Pascal 3.0-compatible Pascal for **PASTA/80** (CP/M / Z80) and **Free Pascal**.
 
+![Empire1 gameplay](gameplay.png)
+
 ## Gameplay
 
 Conquer a 30-planet sector against the computer in real time:
