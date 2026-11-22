@@ -1,7 +1,6 @@
 type 
   planetRec = record
-    Name: str16;
-    production: Integer;      (* Ships per hour             *)
+    production: Integer;      (* Ships per week             *)
     ships: Real;              (* Ships                      *)
     owner,                    (* Player number              *)
     x, y: Integer;            (* Coordinates                *)
@@ -11,7 +10,7 @@ type
 
   
   fleetRec = record
-    warning: boolean;
+    state: Integer;           (* 0=hidden,1=spot,2=size,3=battle *)
     ships: Real;              (* Ships in fleet.            *)
     start,                    (* Depart timestamp           *)
     enter: Real;              (* Arrive timestamp           *)
@@ -22,41 +21,228 @@ type
     ownerName: str16;         (* Redundant to avoid lookup  *)
   end;
 
-const planetCount = 20;
-var planets: array[1..planetCount] of planetRec;
+const
+  planetCount = 30;
+  GridW = 25;
+  GridH = 20;
+  maxPlayerFleets = 16;
+  maxFleets = 32;             (* 2 * maxPlayerFleets *)
+  ProductionPeriod = 7.0;     (* Seconds (days) per production week *)
+  StardatePeriod = 100.0;     (* Seconds (days) per 1.0 stardate *)
+
+var
+  planets: array[1..planetCount] of planetRec;
+  fleets: array[1..maxFleets] of fleetRec;
+  fleetCount, difficulty: Integer;
+  currentTime: Real;
+
+procedure UpdatePlanet(planetId: Integer);
+var
+  elapsed: Real;
+begin
+  elapsed := currentTime - planets[planetId].last;
+  if elapsed > 0 then
+  begin
+    planets[planetId].ships := planets[planetId].ships + elapsed * planets[planetId].production / ProductionPeriod;
+    planets[planetId].last := currentTime;
+  end;
+end;
 
 function traveltime(x0, y0, x1, y1: Integer): Real;
 begin
-  traveltime := round(sqrt(sqr(x0 - x1) + sqr(y0 - y1))) div 12 + 1;
+  traveltime := round(sqrt(sqr(x0 - x1) + sqr(y0 - y1))) * 8 + 20;
 end;
 
+
+function isFreePos(x, y, placedCount: Integer): Boolean;
+var
+  i: Integer;
+  ok: Boolean;
+begin
+  ok := True;
+  i := 1;
+  while (i <= placedCount) and ok do
+  begin
+    if sqr(x - planets[i].x) + sqr(y - planets[i].y) < 5 then
+      ok := False;
+    i := i + 1;
+  end;
+  isFreePos := ok;
+end;
 
 procedure InitModel;
 var
   planet: planetRec;
-  n: Integer;
+  n, tries: Integer;
 
 begin
+  Randomize;
+  currentTime := (2000.0 + random(7000)) * StardatePeriod + random(10) * (StardatePeriod * 0.1);
   for n := 1 to PlanetCount do
   begin
-    planet.x := random(20);
-    planet.y := random(20);
-    planet.production := random(5);
-    planet.ships := random(1500);
+    planet.production := 1 + random(5);
+    planet.ships := 50 + random(250);
     planet.owner := 0;
-    planet.last := Newdate;
+    planet.last := currentTime;
     if n = 1 then
     begin
-      planet.Name := 'MAIN PLANET';
-      planet.ownername := 'COMPUTER';
+      planet.ownername := 'Player';
       planet.owner := 1;
       planet.production := 10;
+      planet.ships := 1000;
+      planet.x := 21;
+      planet.y := 3;
+    end
+    else if n = 2 then
+    begin
+      planet.ownername := 'Computer';
+      planet.owner := 2;
+      planet.production := 10;
+      planet.ships := 1000;
+      planet.x := 3;
+      planet.y := 16;
     end
     else
     begin
-      planet.Name := 'NAMELESS';
-      planet.ownername := 'INDEPENDENT';
+      planet.ownername := 'Neutral';
+      tries := 0;
+      repeat
+        if (tries < 50) and (random(3) = 0) then
+        begin
+          planet.x := round(((Random + Random) * 0.5) * (GridW - 1));
+          planet.y := round(((Random + Random) * 0.5) * (GridH - 1));
+        end
+        else
+        begin
+          planet.x := random(GridW);
+          planet.y := random(GridH);
+        end;
+        if planet.x < 0 then planet.x := 0
+        else if planet.x >= GridW then planet.x := GridW - 1;
+        if planet.y < 0 then planet.y := 0
+        else if planet.y >= GridH then planet.y := GridH - 1;
+        tries := tries + 1;
+      until isFreePos(planet.x, planet.y, n - 1) or (tries >= 100);
     end;
     planets[n] := planet;
+  end;
+  fleetCount := 0;
+  difficulty := 0;
+end;
+
+function ownerFleetCount(ownerId: Integer): Integer;
+var
+  i, c: Integer;
+begin
+  c := 0;
+  for i := 1 to fleetCount do
+    if fleets[i].owner = ownerId then
+      c := c + 1;
+  ownerFleetCount := c;
+end;
+
+function ownerPlanetCount(ownerId: Integer): Integer;
+var
+  i, c: Integer;
+begin
+  c := 0;
+  for i := 1 to PlanetCount do
+    if planets[i].owner = ownerId then
+      c := c + 1;
+  ownerPlanetCount := c;
+end;
+
+function checkWinner: Integer;
+var
+  pAlive, cAlive: Boolean;
+begin
+  pAlive := (ownerPlanetCount(1) > 0) or (ownerFleetCount(1) > 0);
+  cAlive := (ownerPlanetCount(2) > 0) or (ownerFleetCount(2) > 0);
+  if pAlive and cAlive then
+    checkWinner := 0
+  else if pAlive then
+    checkWinner := 1
+  else if cAlive then
+    checkWinner := 2
+  else
+    checkWinner := 3;
+end;
+
+function LaunchFleet(src, dst: Integer; count: Real): Integer;
+var
+  i: Integer;
+begin
+  if (fleetCount >= maxFleets) or (ownerFleetCount(planets[src].owner) >= maxPlayerFleets) then
+  begin
+    LaunchFleet := 0;
+    Exit;
+  end;
+
+  UpdatePlanet(src);
+  planets[src].ships := planets[src].ships - count;
+  fleetCount := fleetCount + 1;
+  i := fleetCount;
+  fleets[i].state := 0;
+  fleets[i].ships := count;
+  fleets[i].start := currentTime;
+  fleets[i].enter := currentTime + traveltime(planets[src].x, planets[src].y, planets[dst].x, planets[dst].y);
+  fleets[i].Source := src;
+  fleets[i].sx := 0;
+  fleets[i].sy := 0;
+  fleets[i].destination := dst;
+  fleets[i].owner := planets[src].owner;
+  fleets[i].ownerName := planets[src].ownerName;
+  LaunchFleet := i;
+end;
+
+procedure StepFleetArrival(slot: Integer; var finished, captured: Boolean);
+var
+  dst: Integer;
+  attLoss, defLoss: Real;
+begin
+  dst := fleets[slot].destination;
+  UpdatePlanet(dst);
+  captured := False;
+  if fleets[slot].owner = planets[dst].owner then
+  begin
+    planets[dst].ships := planets[dst].ships + fleets[slot].ships;
+    finished := True;
+  end
+  else
+  begin
+    attLoss := planets[dst].ships * (0.1 + Random * 0.2);
+    defLoss := fleets[slot].ships * (0.1 + Random * 0.2);
+    if attLoss < 1 then attLoss := 1;
+    if defLoss < 1 then defLoss := 1;
+    fleets[slot].ships := fleets[slot].ships - attLoss;
+    planets[dst].ships := planets[dst].ships - defLoss;
+
+    if (fleets[slot].ships < 1) and (planets[dst].ships < 1) then
+    begin
+      planets[dst].ships := 0;
+      finished := True;
+    end
+    else if planets[dst].ships < 1 then
+    begin
+      planets[dst].ships := fleets[slot].ships;
+      planets[dst].owner := fleets[slot].owner;
+      planets[dst].ownerName := fleets[slot].ownerName;
+      captured := True;
+      finished := True;
+    end
+    else if fleets[slot].ships < 1 then
+      finished := True
+    else
+    begin
+      fleets[slot].enter := currentTime + 0.6;
+      finished := False;
+    end;
+  end;
+
+  if finished then
+  begin
+    if slot < fleetCount then
+      fleets[slot] := fleets[fleetCount];
+    fleetCount := fleetCount - 1;
   end;
 end;

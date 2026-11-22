@@ -48,9 +48,9 @@ begin
   while ((I <= Length(S)) and (S[I] <= ' ')) do
     I := I + 1;
   J := Length(S);
-  while ((J > I) and (S[I] <= ' ')) do
+  while ((J >= I) and (S[J] <= ' ')) do
     J := J - 1;
-  TrimStr := Copy(S, I, J - I);
+  TrimStr := Copy(S, I, J - I + 1);
 end;
 
 function AlignStr(S: String; N: Integer): String;
