@@ -39,6 +39,16 @@ begin
   aiTargetScore := planets[id].production * 10000.0 / ((defense + 10.0) * flight);
 end;
 
+function aiMaxFleets: Integer;
+begin
+  if difficulty = 0 then
+    aiMaxFleets := 4
+  else if difficulty = 1 then
+    aiMaxFleets := 8
+  else
+    aiMaxFleets := maxPlayerFleets;
+end;
+
 procedure TickAI(var launchedFrom: Integer);
 var
   id, dx, dy, dist: Integer;
@@ -59,7 +69,7 @@ begin
         aiNextHome := id;
       end;
     end;
-    if (id <> aiHome) and (planets[aiHome].owner = 2) and (ownerFleetCount(2) < maxPlayerFleets - 2) then
+    if (id <> aiHome) and (planets[aiHome].owner = 2) and (ownerFleetCount(2) < aiMaxFleets - 2) then
     begin
       surplus := Int(planets[id].ships - (5 + planets[id].production));
       if (surplus >= 20) and (LaunchFleet(id, aiHome, surplus) > 0) then
@@ -80,7 +90,7 @@ begin
   if aiPlanet > PlanetCount then
   begin
     aiPlanet := 1;
-    if (planets[aiHome].owner = 2) and (aiBestTarget > 0) and (not hasComputerFleetTo(aiBestTarget)) then
+    if (planets[aiHome].owner = 2) and (aiBestTarget > 0) and (not hasComputerFleetTo(aiBestTarget)) and (ownerFleetCount(2) < aiMaxFleets) then
     begin
       UpdatePlanet(aiHome);
       need := Int(aiDefenseAtArrival(aiBestTarget, traveltime(planets[aiHome].x, planets[aiHome].y, planets[aiBestTarget].x, planets[aiBestTarget].y)) + 10.99);
