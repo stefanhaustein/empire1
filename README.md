@@ -23,17 +23,28 @@ Conquer a 30-planet sector against the computer in real time:
 - `R` (**[R]estart**): Start a new match (confirms while a match is still in progress).
 - `Q` (**[Q]uit**): Exit the game (confirms while a match is still in progress).
 
-## Building
+## Building & Running
 
-Runs in an 80×24 color/ANSI terminal.
+Runs in an 80×24 color terminal.
 
-### CP/M / Z80 (PASTA/80)
+### CP/M / Z80 (PASTA/80 & tnylpo)
+
+Compile `empire.com` with [PASTA/80](https://github.com/pleumann/pasta80):
 
 ```sh
 pasta80 empire.pas
 ```
 
-Builds `empire.com` (also included pre-built).
+Run it on Unix/macOS in the `tnylpo` CP/M-80 emulator:
+
+```sh
+tnylpo -o y -s empire
+```
+
+- `-s`: enables VT52 support 
+- `-o y`: enables color output
+
+You can also transfer `empire.com` directly to CP/M-80 hardware or another CP/M emulator configured for an 80×24 terminal.
 
 ### Native (Free Pascal)
 
@@ -49,3 +60,9 @@ fpc empire.pas
 - `ai.pas` — Computer expansion and reinforcement logic
 - `ui.pas` — Terminal UI, star chart, and message log
 - `str.pas` — String formatting and conversion helpers
+
+## License
+
+Copyright (C) 2026 Stefan Haustein
+
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for details.
