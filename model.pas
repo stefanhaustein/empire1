@@ -30,12 +30,12 @@ const
   maxPlayerFleets = 32;
   maxFleets = 64;             (* 2 * maxPlayerFleets *)
   ProductionPeriod = 7.0;     (* Seconds (days) per production week *)
-  StardatePeriod = 100.0;     (* Seconds (days) per 1.0 stardate *)
+  YearDays = 365.0;           (* Days per stardate year *)
 
 var
   planets: array[1..planetCount] of planetRec;
   fleets: array[1..maxFleets] of fleetRec;
-  fleetCount, difficulty: Integer;
+  fleetCount, difficulty, baseYear: Integer;
   currentTime: Real;
 
 procedure UpdatePlanet(planetId: Integer);
@@ -79,7 +79,8 @@ var
 
 begin
   Randomize;
-  currentTime := (2000.0 + random(7000)) * StardatePeriod + random(10) * (StardatePeriod * 0.1);
+  baseYear := 2000 + random(7000);
+  currentTime := random(40) * 9.0;
   for n := 1 to PlanetCount do
   begin
     planet.production := 1 + random(5);

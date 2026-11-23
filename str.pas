@@ -1,42 +1,28 @@
 type 
   str16 = String[16];
 
-function Replace(S: String; C, D: Char): String;
-var
-  I: Integer;
-begin
-  for I := 1 to Length(S) do
-    if S[I] = C then
-      S[I] := D;
-  Replace := S;
-end;
-
 function ToUpper(S: String): String;
 var
   I: Integer;
 begin
   for I := 1 to Length(S) do
     S[I] := UpCase(S[I]);
-  ToUpper := S;  
+  ToUpper := S;
 end;
 
-function Real2Str(R: Real; N: Integer): String;
+function Real2Str(R: Real): str16;
 var
-  S: String;
+  S: str16;
 begin
-  Str(R:Abs(N):0, S);
-  if N < 0 then
-    S := Replace(S, ' ', '0');
+  Str(R:0:0, S);
   Real2Str := S;
 end;
 
-function Int2Str(I: Integer; N: Integer): String;
+function Int2Str(I: Integer): str16;
 var
-  S: String;
+  S: str16;
 begin
-  Str(I:Abs(N), S);
-  if N < 0 then
-    S := Replace(S, ' ', '0');
+  Str(I, S);
   Int2Str := S;
 end;
 

@@ -57,12 +57,12 @@ const
 
 function aiMaxFleets: Integer;
 begin
-  if difficulty = 0 then
-    aiMaxFleets := 8
-  else if difficulty = 1 then
-    aiMaxFleets := 16
+  case difficulty of
+    0: aiMaxFleets := 8;
+    1: aiMaxFleets := 16;
   else
     aiMaxFleets := maxPlayerFleets;
+  end;
 end;
 
 function canAiLaunch(isReinf: Boolean): Boolean;

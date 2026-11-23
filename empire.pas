@@ -25,7 +25,7 @@ begin
   end;
   Val(arg, n, err);
   if (err <> 0) or (n < 1) or (n > PlanetCount) then
-    showMessage('Invalid planet (1-' + Int2Str(PlanetCount, 0) + ')')
+    showMessage('Invalid planet (1-' + Int2Str(PlanetCount) + ')')
   else
   begin
     oldSelected := selectedPlanet;
@@ -35,7 +35,7 @@ begin
       restorePlanet(oldSelected, 0);
     restorePlanet(n, 0);
     renderPlanetDetails(n);
-    showMessage('Selected planet ' + Int2Str(n, 0));
+    showMessage('Selected planet ' + Int2Str(n));
   end;
 end;
 
@@ -70,7 +70,7 @@ begin
   Val(arg, n, err);
   if (err <> 0) or (n < 1) or (n > PlanetCount) then
   begin
-    showMessage('Invalid planet (1-' + Int2Str(PlanetCount, 0) + ')');
+    showMessage('Invalid planet (1-' + Int2Str(PlanetCount) + ')');
     Exit;
   end;
 
@@ -96,11 +96,11 @@ begin
   UpdatePlanet(sendSource);
   if Planets[sendSource].ships < 1 then
   begin
-    showMessage('No ships on planet #' + Int2Str(sendSource, 0));
+    showMessage('No ships on planet #' + Int2Str(sendSource));
     Exit;
   end;
   promptMode := 3;
-  startPrompt('Ships [' + Real2Str(Int(Planets[sendSource].ships), 0) + ']: ');
+  startPrompt('Ships [' + Real2Str(Int(Planets[sendSource].ships)) + ']: ');
 end;
 
 procedure handleSendCount(arg: String);
@@ -113,7 +113,7 @@ begin
   if Planets[sendSource].owner <> 1 then
     showMessage('Source planet lost')
   else if Planets[sendSource].ships < 1 then
-    showMessage('No ships on planet #' + Int2Str(sendSource, 0))
+    showMessage('No ships on planet #' + Int2Str(sendSource))
   else
   begin
     if arg = '' then
@@ -137,7 +137,7 @@ begin
       begin
         if selectedPlanet = sendSource then
           renderPlanetShips(selectedPlanet);
-        showColoredMessage('Sent ' + Real2Str(count, 0) + ' #' + Int2Str(sendSource, 0) + '->#' + Int2Str(sendDest, 0) + ' (' + Real2Str(fleets[slot].enter - currentTime, 0) + 'd)', 1);
+        showColoredMessage('Sent ' + Real2Str(count) + ' #' + Int2Str(sendSource) + '->#' + Int2Str(sendDest) + ' (' + Real2Str(fleets[slot].enter - currentTime) + 'd)', 1);
       end;
     end;
   end;
@@ -150,9 +150,9 @@ var
 begin
   if (tickPlanet = selectedPlanet) and ((Planets[tickPlanet].owner = 1) or (difficulty = 0)) then
   begin
-    oldShips := Real2Str(Planets[tickPlanet].ships, 0);
+    oldShips := Real2Str(Planets[tickPlanet].ships);
     UpdatePlanet(tickPlanet);
-    newShips := Real2Str(Planets[tickPlanet].ships, 0);
+    newShips := Real2Str(Planets[tickPlanet].ships);
     if newShips <> oldShips then
       renderPlanetShips(tickPlanet);
   end
@@ -170,12 +170,12 @@ end;
 
 function ownerCode(ownerId: Integer): Char;
 begin
-  if ownerId = 1 then
-    ownerCode := 'P'
-  else if ownerId = 2 then
-    ownerCode := 'C'
+  case ownerId of
+    1: ownerCode := 'P';
+    2: ownerCode := 'C';
   else
     ownerCode := 'N';
+  end;
 end;
 
 procedure checkFleetSensors(slot: Integer);
@@ -196,7 +196,7 @@ begin
       fleets[slot].state := 2;
       if fleets[slot].owner <> 1 then
       begin
-        showColoredMessage('Incoming fleet (' + Real2Str(fleets[slot].ships, 0) + ') at #' + Int2Str(dst, 0), fleets[slot].owner);
+        showColoredMessage('Incoming fleet (' + Real2Str(fleets[slot].ships) + ') at #' + Int2Str(dst), fleets[slot].owner);
         drawFleet(slot);
       end;
     end
@@ -204,7 +204,7 @@ begin
     begin
       fleets[slot].state := 1;
       if fleets[slot].owner <> 1 then
-        showColoredMessage('Incoming fleet at #' + Int2Str(dst, 0), fleets[slot].owner);
+        showColoredMessage('Incoming fleet at #' + Int2Str(dst), fleets[slot].owner);
     end;
   end
   else if fleets[slot].state >= 1 then
@@ -249,13 +249,13 @@ begin
       if dst = selectedPlanet then
         renderPlanetShips(dst);
       if playerInvolved then
-        showStatus('#' + Int2Str(dst, 0) + ' battle: ' + ownerCode(attOwner) + ' ' + Real2Str(fleets[tickFleet].ships, 0) + ' vs ' + ownerCode(planets[dst].owner) + ' ' + Real2Str(planets[dst].ships, 0), attOwner);
+        showStatus('#' + Int2Str(dst) + ' battle: ' + ownerCode(attOwner) + ' ' + Real2Str(fleets[tickFleet].ships) + ' vs ' + ownerCode(planets[dst].owner) + ' ' + Real2Str(planets[dst].ships), attOwner);
       tickFleet := tickFleet + 1;
     end
     else
     begin
       if captured then
-        renderPlanet(dst);
+        restorePlanet(dst, 0);
       if dst = selectedPlanet then
       begin
         if captured then
@@ -264,23 +264,23 @@ begin
           renderPlanetShips(dst);
       end;
       if captured then
-        showColoredMessage('#' + Int2Str(dst, 0) + ' captured by ' + planets[dst].ownerName, planets[dst].owner)
+        showColoredMessage('#' + Int2Str(dst) + ' captured by ' + planets[dst].ownerName, planets[dst].owner)
       else if wasHostile and playerInvolved then
-        showColoredMessage('#' + Int2Str(dst, 0) + ' held (' + Real2Str(planets[dst].ships, 0) + ' left)', planets[dst].owner)
+        showColoredMessage('#' + Int2Str(dst) + ' held (' + Real2Str(planets[dst].ships) + ' left)', planets[dst].owner)
       else if (not wasHostile) and (attOwner = 1) then
-        showColoredMessage('Fleet arrived at #' + Int2Str(dst, 0), 1);
+        showColoredMessage('Fleet arrived at #' + Int2Str(dst), 1);
       if gameWinner = 0 then
       begin
         winner := checkWinner;
         if winner > 0 then
         begin
           gameWinner := winner;
-          if winner = 1 then
-            showColoredMessage('Victory! All enemy forces defeated.', 1)
-          else if winner = 2 then
-            showColoredMessage('Defeat! All your forces were lost.', 2)
+          case winner of
+            1: showColoredMessage('Victory! All enemy forces defeated.', 1);
+            2: showColoredMessage('Defeat! All your forces were lost.', 2);
           else
             showMessage('Draw! Both empires destroyed.');
+          end;
           showMessage('Press R to restart or Q to quit.');
         end;
       end;
@@ -351,7 +351,7 @@ begin
       end;
     end;
   until chosen;
-  showMessage('Difficulty ' + Int2Str(difficulty, 0) + ' active');
+  showMessage('Difficulty ' + Int2Str(difficulty) + ' active');
 end;
 
 procedure startNewGame;
@@ -407,16 +407,13 @@ begin
         begin
           mode := promptMode;
           promptMode := 0;
-          if mode = 1 then
-            selectPlanet(arg)
-          else if mode = 2 then
-            handleSendPlanet(arg)
-          else if mode = 3 then
-            handleSendCount(arg)
-          else if (mode = 4) and isYes(arg) then
-            startNewGame
-          else if (mode = 5) and isYes(arg) then
-            finishQuit(done);
+          case mode of
+            1: selectPlanet(arg);
+            2: handleSendPlanet(arg);
+            3: handleSendCount(arg);
+            4: if isYes(arg) then startNewGame;
+            5: if isYes(arg) then finishQuit(done);
+          end;
         end
         else if status = -1 then
         begin
@@ -426,31 +423,22 @@ begin
       end
       else
       begin
-        ch := UpCase(ch);
-        if ch = 'P' then
-        begin
-          promptMode := 1;
-          startPrompt('Planet ID: ');
-        end
-        else if ch = 'S' then
-          startSendCommand
-        else if ch = 'M' then
-          toggleMessages(selectedPlanet)
-        else if (ch = #27) and messagesOpen then
-          toggleMessages(selectedPlanet)
-        else if ch = 'R' then
-        begin
-          if gameWinner > 0 then
+        case UpCase(ch) of
+          'P': begin
+            promptMode := 1;
+            startPrompt('Planet ID: ');
+          end;
+          'S': startSendCommand;
+          'M': toggleMessages(selectedPlanet);
+          #27: if messagesOpen then toggleMessages(selectedPlanet);
+          'R': if gameWinner > 0 then
             startNewGame
           else
           begin
             promptMode := 4;
             startPrompt('Restart? (y/n): ');
           end;
-        end
-        else if ch = 'Q' then
-        begin
-          if gameWinner > 0 then
+          'Q': if gameWinner > 0 then
             finishQuit(done)
           else
           begin

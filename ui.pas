@@ -43,12 +43,12 @@ end;
 
 function ownerColor(ownerId: Integer): Integer;
 begin
-  if ownerId = 1 then
-    ownerColor := Cyan
-  else if ownerId = 2 then
-    ownerColor := Red
+  case ownerId of
+    1: ownerColor := Cyan;
+    2: ownerColor := Red;
   else
     ownerColor := Green;
+  end;
 end;
 
 procedure setOwnerColor(ownerId: Integer);
@@ -106,12 +106,12 @@ function planetChar(var p: PlanetRec): Char;
 var
   ch: Char;
 begin
-  if p.owner = 1 then
-    ch := 'p'
-  else if p.owner = 2 then
-    ch := 'c'
+  case p.owner of
+    1: ch := 'p';
+    2: ch := 'c';
   else
     ch := 'n';
+  end;
   if p.production >= 4 then
     ch := UpCase(ch);
   planetChar := ch;
@@ -327,10 +327,14 @@ end;
 
 function formatStardate(t: Real): str16;
 var
-  s: str16;
+  d, y: Real;
+  yr, day: Integer;
 begin
-  Str(Int(t / (StardatePeriod * 0.1)) / 10.0:0:1, s);
-  formatStardate := s;
+  d := Int((t + 0.0001) / 9.0) * 9.0;
+  y := Int(d / YearDays);
+  yr := baseYear + Round(y);
+  day := 1 + Round(d - y * YearDays);
+  formatStardate := Int2Str(yr) + '.' + Int2Str(day);
 end;
 
 function stardateStr: str16;
@@ -385,13 +389,13 @@ begin
   setOwnerColor(p.owner);
   if (p.owner = 1) or (difficulty = 0) then
   begin
-    writeRHS(8, '  ' + Real2Str(p.ships, 0));
+    writeRHS(8, '  ' + Real2Str(p.ships));
     writeRHS(11, '');
     writeRHS(12, '');
   end
   else if p.seenTime[1] >= 0 then
   begin
-    writeRHS(8, '  ~' + Real2Str(p.seenShips[1], 0));
+    writeRHS(8, '  ~' + Real2Str(p.seenShips[1]));
     writeRHS(11, 'Seen:');
     writeRHS(12, '  ' + formatStardate(p.seenTime[1]));
   end
@@ -418,12 +422,12 @@ begin
   writeRHS(2, '');
   setOwnerColor(p.owner);
   writeRHS(3, 'Planet:');
-  writeRHS(4, '  #' + Int2Str(planetId, 0) + ' (' + Chr(Ord('A') + p.x) + Int2Str(p.y + 1, 0) + ')');
+  writeRHS(4, '  #' + Int2Str(planetId) + ' (' + Chr(Ord('A') + p.x) + Int2Str(p.y + 1) + ')');
   writeRHS(5, 'Owner:');
   writeRHS(6, '  ' + p.ownerName);
   writeRHS(7, 'Ships:');
   writeRHS(9, 'Production:');
-  writeRHS(10, '  ' + Int2Str(p.production, 0) + '/wk');
+  writeRHS(10, '  ' + Int2Str(p.production) + '/wk');
   renderPlanetShipInfo(planetId);
   renderMenu(planetId);
   focusInput;
