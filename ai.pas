@@ -26,8 +26,20 @@ begin
 end;
 
 function aiDefenseAtArrival(id: Integer; flight: Real): Real;
+var
+  known, age: Real;
 begin
-  aiDefenseAtArrival := planets[id].ships + flight * planets[id].production / ProductionPeriod;
+  if planets[id].owner = 2 then
+    aiDefenseAtArrival := planets[id].ships + flight * planets[id].production / ProductionPeriod
+  else if planets[id].seenTime[2] >= 0 then
+  begin
+    known := planets[id].seenShips[2];
+    age := currentTime - planets[id].seenTime[2];
+    if age < 0 then age := 0;
+    aiDefenseAtArrival := known + (age + flight) * planets[id].production / ProductionPeriod;
+  end
+  else
+    aiDefenseAtArrival := 180.0 + flight * planets[id].production / ProductionPeriod;
 end;
 
 function aiTargetScore(id: Integer): Real;
@@ -39,14 +51,89 @@ begin
   aiTargetScore := planets[id].production * 10000.0 / ((defense + 10.0) * flight);
 end;
 
+const
+  aiHomeReserve = 50.0;
+  aiMinSurplus = 40.0;
+
 function aiMaxFleets: Integer;
 begin
   if difficulty = 0 then
-    aiMaxFleets := 4
-  else if difficulty = 1 then
     aiMaxFleets := 8
+  else if difficulty = 1 then
+    aiMaxFleets := 16
   else
     aiMaxFleets := maxPlayerFleets;
+end;
+
+function canAiLaunch(isReinf: Boolean): Boolean;
+var
+  i, att, reinf, limit: Integer;
+begin
+  att := 0;
+  reinf := 0;
+  for i := 1 to fleetCount do
+    if fleets[i].owner = 2 then
+    begin
+      if planets[fleets[i].destination].owner = 2 then
+        reinf := reinf + 1
+      else
+        att := att + 1;
+    end;
+  limit := aiMaxFleets;
+  if isReinf then
+    canAiLaunch := (att + reinf < limit) and (reinf < limit - 2)
+  else
+    canAiLaunch := (att + reinf < limit) and (att < limit - 2);
+end;
+
+function hasSpottedThreat(id: Integer): Boolean;
+var
+  i: Integer;
+begin
+  hasSpottedThreat := False;
+  for i := 1 to fleetCount do
+    if (fleets[i].destination = id) and (fleets[i].owner <> 2) and (fleets[i].state >= 1) and (fleets[i].state < 3) then
+    begin
+      hasSpottedThreat := True;
+      Exit;
+    end;
+end;
+
+procedure tryDefendPlanet(id: Integer; var launchedFrom: Integer);
+var
+  i: Integer;
+  attShips, friendlyShips, earliestHit, rem, flight, need: Real;
+begin
+  attShips := 0;
+  earliestHit := 0;
+  for i := 1 to fleetCount do
+    if (fleets[i].destination = id) and (fleets[i].owner <> 2) and (fleets[i].state = 2) then
+    begin
+      attShips := attShips + fleets[i].ships;
+      if (earliestHit = 0) or (fleets[i].enter < earliestHit) then
+        earliestHit := fleets[i].enter;
+    end;
+  if attShips <= 0 then
+    Exit;
+
+  rem := earliestHit - currentTime;
+  flight := traveltime(planets[aiHome].x, planets[aiHome].y, planets[id].x, planets[id].y);
+  if (rem <= 0) or (flight >= rem) then
+    Exit;
+
+  friendlyShips := 0;
+  for i := 1 to fleetCount do
+    if (fleets[i].destination = id) and (fleets[i].owner = 2) and (fleets[i].state < 3) and (fleets[i].enter < earliestHit) then
+      friendlyShips := friendlyShips + fleets[i].ships;
+
+  UpdatePlanet(id);
+  UpdatePlanet(aiHome);
+  need := Int(attShips + 10.99 - (aiDefenseAtArrival(id, rem) + friendlyShips));
+  if (need >= 1) and (planets[aiHome].ships - aiHomeReserve >= need) then
+  begin
+    if LaunchFleet(aiHome, id, need) > 0 then
+      launchedFrom := aiHome;
+  end;
 end;
 
 procedure TickAI(var launchedFrom: Integer);
@@ -69,11 +156,16 @@ begin
         aiNextHome := id;
       end;
     end;
-    if (id <> aiHome) and (planets[aiHome].owner = 2) and (ownerFleetCount(2) < aiMaxFleets - 2) then
+    if (id <> aiHome) and (planets[aiHome].owner = 2) and canAiLaunch(True) then
     begin
-      surplus := Int(planets[id].ships - (5 + planets[id].production));
-      if (surplus >= 20) and (LaunchFleet(id, aiHome, surplus) > 0) then
-        launchedFrom := id;
+      if hasSpottedThreat(id) then
+        tryDefendPlanet(id, launchedFrom)
+      else
+      begin
+        surplus := Int(planets[id].ships - (5 + planets[id].production));
+        if (surplus >= aiMinSurplus) and (LaunchFleet(id, aiHome, surplus) > 0) then
+          launchedFrom := id;
+      end;
     end;
   end
   else if (planets[aiHome].owner = 2) and (not hasComputerFleetTo(id)) then
@@ -90,11 +182,11 @@ begin
   if aiPlanet > PlanetCount then
   begin
     aiPlanet := 1;
-    if (planets[aiHome].owner = 2) and (aiBestTarget > 0) and (not hasComputerFleetTo(aiBestTarget)) and (ownerFleetCount(2) < aiMaxFleets) then
+    if (planets[aiHome].owner = 2) and (aiBestTarget > 0) and (not hasComputerFleetTo(aiBestTarget)) and canAiLaunch(False) then
     begin
       UpdatePlanet(aiHome);
       need := Int(aiDefenseAtArrival(aiBestTarget, traveltime(planets[aiHome].x, planets[aiHome].y, planets[aiBestTarget].x, planets[aiBestTarget].y)) + 10.99);
-      if (planets[aiHome].ships - 100.0 >= need) and (need >= 1) then
+      if (planets[aiHome].ships - aiHomeReserve >= need) and (need >= 1) then
       begin
         if LaunchFleet(aiHome, aiBestTarget, need) > 0 then
           launchedFrom := aiHome;

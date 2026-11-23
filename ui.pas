@@ -112,7 +112,7 @@ begin
     ch := 'c'
   else
     ch := 'n';
-  if p.production >= 5 then
+  if p.production >= 4 then
     ch := UpCase(ch);
   planetChar := ch;
 end;
@@ -189,6 +189,31 @@ begin
     end;
 end;
 
+function fleetGlyph(slot: Integer): Char;
+var
+  s: Real;
+  tier: Integer;
+  glyphs: str16;
+begin
+  if (difficulty > 0) and (fleets[slot].owner <> 1) and (fleets[slot].state < 2) then
+    fleetGlyph := '?'
+  else
+  begin
+    s := fleets[slot].ships;
+    if s >= 1024 then
+      tier := 3
+    else if s >= 256 then
+      tier := 2
+    else
+      tier := 1;
+    if fleets[slot].owner = 1 then
+      glyphs := 'oO@'
+    else
+      glyphs := '+*#';
+    fleetGlyph := glyphs[tier];
+  end;
+end;
+
 procedure drawFleet(slot: Integer);
 begin
   if messagesOpen or (fleets[slot].sx <= 0) then
@@ -197,10 +222,7 @@ begin
     Exit;
   gotoXY(fleets[slot].sx, fleets[slot].sy);
   setOwnerColor(fleets[slot].owner);
-  if fleets[slot].owner = 1 then
-    write('*')
-  else
-    write('+');
+  write(fleetGlyph(slot));
   TextColor(White);
   focusInput;
 end;
@@ -303,12 +325,17 @@ begin
   writePadded(splitCol + 2, row, DetailsWidth - 2, s);
 end;
 
-function stardateStr: str16;
+function formatStardate(t: Real): str16;
 var
   s: str16;
 begin
-  Str(Int(currentTime / (StardatePeriod * 0.1)) / 10.0:0:1, s);
-  stardateStr := s;
+  Str(Int(t / (StardatePeriod * 0.1)) / 10.0:0:1, s);
+  formatStardate := s;
+end;
+
+function stardateStr: str16;
+begin
+  stardateStr := formatStardate(currentTime);
 end;
 
 procedure renderStardate;
@@ -337,24 +364,49 @@ end;
 
 procedure renderMenu(planetId: Integer);
 begin
-  writeMenuItem(splitRow - 3, 'P', 'lanet');
+  writeMenuItem(splitRow - 5, 'P', 'lanet');
   if Planets[planetId].owner = 1 then
-    writeMenuItem(splitRow - 2, 'S', 'end to')
+    writeMenuItem(splitRow - 4, 'S', 'end to')
   else
-    writeMenuItem(splitRow - 2, 'S', 'end from');
+    writeMenuItem(splitRow - 4, 'S', 'end from');
   if messagesOpen then
-    writeMenuItem(splitRow - 1, 'M', 'ap')
+    writeMenuItem(splitRow - 3, 'M', 'ap')
   else
-    writeMenuItem(splitRow - 1, 'M', 'essages');
-  writeMenuItem(splitRow + 1, 'R', 'estart');
-  writeMenuItem(splitRow + 2, 'Q', 'uit');
+    writeMenuItem(splitRow - 3, 'M', 'essages');
+  writeMenuItem(splitRow - 1, 'R', 'estart');
+  writeMenuItem(splitRow + 1, 'Q', 'uit');
+end;
+
+procedure renderPlanetShipInfo(planetId: Integer);
+var
+  p: PlanetRec;
+begin
+  p := Planets[planetId];
+  setOwnerColor(p.owner);
+  if (p.owner = 1) or (difficulty = 0) then
+  begin
+    writeRHS(8, '  ' + Real2Str(p.ships, 0));
+    writeRHS(11, '');
+    writeRHS(12, '');
+  end
+  else if p.seenTime[1] >= 0 then
+  begin
+    writeRHS(8, '  ~' + Real2Str(p.seenShips[1], 0));
+    writeRHS(11, 'Seen:');
+    writeRHS(12, '  ' + formatStardate(p.seenTime[1]));
+  end
+  else
+  begin
+    writeRHS(8, '  ???');
+    writeRHS(11, '');
+    writeRHS(12, '');
+  end;
+  TextColor(White);
 end;
 
 procedure renderPlanetShips(planetId: Integer);
 begin
-  setOwnerColor(Planets[planetId].owner);
-  writeRHS(8, '  ' + Real2Str(Planets[planetId].ships, 0));
-  TextColor(White);
+  renderPlanetShipInfo(planetId);
   focusInput;
 end;
 
@@ -370,10 +422,9 @@ begin
   writeRHS(5, 'Owner:');
   writeRHS(6, '  ' + p.ownerName);
   writeRHS(7, 'Ships:');
-  writeRHS(8, '  ' + Real2Str(p.ships, 0));
   writeRHS(9, 'Production:');
   writeRHS(10, '  ' + Int2Str(p.production, 0) + '/wk');
-  TextColor(White);
+  renderPlanetShipInfo(planetId);
   renderMenu(planetId);
   focusInput;
 end;

@@ -6,6 +6,8 @@ type
     x, y: Integer;            (* Coordinates                *)
     ownerName: str16;         (* Redundant to avoid lookup  *)
     last: Real;               (* Last access timestamp      *)
+    seenShips: array[1..2] of Real;
+    seenTime: array[1..2] of Real;
   end;
 
   
@@ -25,8 +27,8 @@ const
   planetCount = 30;
   GridW = 25;
   GridH = 20;
-  maxPlayerFleets = 16;
-  maxFleets = 32;             (* 2 * maxPlayerFleets *)
+  maxPlayerFleets = 32;
+  maxFleets = 64;             (* 2 * maxPlayerFleets *)
   ProductionPeriod = 7.0;     (* Seconds (days) per production week *)
   StardatePeriod = 100.0;     (* Seconds (days) per 1.0 stardate *)
 
@@ -84,14 +86,18 @@ begin
     planet.ships := 50 + random(250);
     planet.owner := 0;
     planet.last := currentTime;
+    planet.seenShips[1] := -1;
+    planet.seenTime[1] := -1;
+    planet.seenShips[2] := -1;
+    planet.seenTime[2] := -1;
     if n = 1 then
     begin
       planet.ownername := 'Player';
       planet.owner := 1;
       planet.production := 10;
       planet.ships := 1000;
-      planet.x := 21;
-      planet.y := 3;
+      planet.x := 19;
+      planet.y := 5;
     end
     else if n = 2 then
     begin
@@ -99,8 +105,8 @@ begin
       planet.owner := 2;
       planet.production := 10;
       planet.ships := 1000;
-      planet.x := 3;
-      planet.y := 16;
+      planet.x := 5;
+      planet.y := 14;
     end
     else
     begin
@@ -197,13 +203,15 @@ end;
 
 procedure StepFleetArrival(slot: Integer; var finished, captured: Boolean);
 var
-  dst: Integer;
+  dst, oldOwner, attOwner: Integer;
   attLoss, defLoss: Real;
 begin
   dst := fleets[slot].destination;
+  oldOwner := planets[dst].owner;
+  attOwner := fleets[slot].owner;
   UpdatePlanet(dst);
   captured := False;
-  if fleets[slot].owner = planets[dst].owner then
+  if attOwner = oldOwner then
   begin
     planets[dst].ships := planets[dst].ships + fleets[slot].ships;
     finished := True;
@@ -225,7 +233,7 @@ begin
     else if planets[dst].ships < 1 then
     begin
       planets[dst].ships := fleets[slot].ships;
-      planets[dst].owner := fleets[slot].owner;
+      planets[dst].owner := attOwner;
       planets[dst].ownerName := fleets[slot].ownerName;
       captured := True;
       finished := True;
@@ -236,6 +244,17 @@ begin
     begin
       fleets[slot].enter := currentTime + 0.6;
       finished := False;
+    end;
+
+    if (attOwner = 1) or (attOwner = 2) then
+    begin
+      planets[dst].seenShips[attOwner] := planets[dst].ships;
+      planets[dst].seenTime[attOwner] := currentTime;
+    end;
+    if captured and ((oldOwner = 1) or (oldOwner = 2)) then
+    begin
+      planets[dst].seenShips[oldOwner] := planets[dst].ships;
+      planets[dst].seenTime[oldOwner] := currentTime;
     end;
   end;
 

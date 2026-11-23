@@ -148,7 +148,7 @@ var
   launchedFrom: Integer;
   oldShips, newShips: String;
 begin
-  if tickPlanet = selectedPlanet then
+  if (tickPlanet = selectedPlanet) and ((Planets[tickPlanet].owner = 1) or (difficulty = 0)) then
   begin
     oldShips := Real2Str(Planets[tickPlanet].ships, 0);
     UpdatePlanet(tickPlanet);
@@ -179,29 +179,37 @@ begin
 end;
 
 procedure checkFleetSensors(slot: Integer);
+const
+  SpotRange = 100.0;
+  ScanRange = 50.0;
 var
   dst: Integer;
-  rem, detectRange: Real;
+  rem: Real;
 begin
   dst := fleets[slot].destination;
-  if planets[dst].owner = 1 then
+  if ((fleets[slot].owner = 1) and (planets[dst].owner = 2)) or
+     ((fleets[slot].owner <> 1) and (planets[dst].owner = 1)) then
   begin
     rem := fleets[slot].enter - currentTime;
-    detectRange := 15.0 + sqrt(fleets[slot].ships) * 3.0;
-    if (fleets[slot].state < 2) and (rem <= detectRange * 0.5) then
+    if (fleets[slot].state < 2) and (rem <= ScanRange) then
     begin
       fleets[slot].state := 2;
-      showColoredMessage('Incoming fleet (' + Real2Str(fleets[slot].ships, 0) + ') at #' + Int2Str(dst, 0), fleets[slot].owner);
+      if fleets[slot].owner <> 1 then
+      begin
+        showColoredMessage('Incoming fleet (' + Real2Str(fleets[slot].ships, 0) + ') at #' + Int2Str(dst, 0), fleets[slot].owner);
+        drawFleet(slot);
+      end;
     end
-    else if (fleets[slot].state = 0) and (rem <= detectRange) then
+    else if (fleets[slot].state = 0) and (rem <= SpotRange) then
     begin
       fleets[slot].state := 1;
-      showColoredMessage('Incoming fleet at #' + Int2Str(dst, 0), fleets[slot].owner);
+      if fleets[slot].owner <> 1 then
+        showColoredMessage('Incoming fleet at #' + Int2Str(dst, 0), fleets[slot].owner);
     end;
   end
   else if fleets[slot].state >= 1 then
   begin
-    if difficulty > 0 then
+    if (fleets[slot].owner <> 1) and (difficulty > 0) then
     begin
       eraseFleet(slot);
       fleets[slot].sx := 0;
@@ -209,7 +217,7 @@ begin
     end;
     fleets[slot].state := 0;
   end;
-  if (difficulty = 0) or (fleets[slot].state >= 1) then
+  if (fleets[slot].owner = 1) or (difficulty = 0) or (fleets[slot].state >= 1) then
     updateFleetPos(slot);
 end;
 
@@ -280,10 +288,7 @@ begin
   end
   else
   begin
-    if fleets[tickFleet].owner = 1 then
-      updateFleetPos(tickFleet)
-    else
-      checkFleetSensors(tickFleet);
+    checkFleetSensors(tickFleet);
     tickFleet := tickFleet + 1;
   end;
   if tickFleet > fleetCount then
