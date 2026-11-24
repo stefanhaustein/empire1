@@ -2,6 +2,8 @@
 
 A real-time, single-player terminal strategy game inspired by classic *Empire*, written in Turbo Pascal 3.0-compatible Pascal for **PASTA/80** (CP/M / Z80) and **Free Pascal**.
 
+**[Play online in your browser](https://stefan-haustein.com/projects/empire/)** (runs the compiled CP/M binary on a JavaScript Z80 emulator; `empire.com` can also be downloaded from that page).
+
 ![Empire1 gameplay](gameplay.png)
 
 ## Gameplay
